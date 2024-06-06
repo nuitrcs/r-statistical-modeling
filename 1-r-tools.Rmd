@@ -1,0 +1,332 @@
+---
+title: "Review in R"
+output: html_document
+date: "2024-06-05"
+---
+
+```{r}
+if (!require("palmermpenguins")) install.packages("palmermpenguins")
+if (!require("gridExtra")) install.packages("gridExtra")
+
+library(palmerpenguins)
+library(tidyverse)
+library(gridExtra)
+```
+
+
+# Steps in Statistical Modeling Process
+
+1. Define the research question and design the study
+2. Collect data
+3. Clean and explore data
+  - Missing data
+  - descriptives
+  - outliers
+4. Choose and fit a statistical test or model
+5. Evaluate and criticize the fit of model
+6. Draw inference
+
+# Quick Review of R
+
+Being able to utilize core functions of R as well as the data manipulation language in tidyverse is essential tool for statistical analysis. Rarely do you start with the dataset that is clean and ready for analysis, and often you will need to go back after modelling after evaluating the model fit.
+
+## Data Manipulation with dplyr and tidyr
+
+Piping operator `%>%` (or `|>`, which is available in base R as of R 4.1.0) is a powerful syntax often used in tidyverse workflow. It allows you to chain multiple functions together, passing the output of one function to the next. While you could achieve the same functionality by enclosing one function within another, multiple levels of nesting can make the code difficult to read.
+
+```{r, eval=FALSE}
+# with piping
+data %>%
+  func1() %>%
+  func2() %>%
+  func3()
+
+# without piping
+func3(func2(func1(data)))
+```
+
+You can select columns with `select()` function.
+
+```{r}
+penguins %>% select(species, island, bill_length_mm)
+```
+
+Filter rows with the `filter()` function with filter criteria inside the function.
+
+```{r}
+penguins %>% 
+  select(species, island, bill_length_mm) %>%
+  filter(species == "Adelie", island == "Torgersen", bill_length_mm > 45)
+```
+
+You can create new columns or replace existing ones with `mutate()` function.
+
+```{r}
+penguins %>%
+  select(species, sex) %>%
+  mutate(missing_sex = is.na(sex)) %>%
+  head(10)
+```
+
+You can group data with `group_by()` function and summarize data with `summarize()` function.
+
+```{r}
+penguins %>%
+  group_by(species, island) %>%
+  summarize(
+    n = n(),
+    mean_bill_length = mean(bill_length_mm),
+    sd_bill_length = sd(bill_length_mm)
+  )
+```
+
+If you have attended the R Intermediate Tidyverse workshop, you would have also encountered reshaping functions such as `pivot_longer()` and `pivot_wider()`. You may find these functions useful when you need to visualize the data in a certain way, or if you are working with repeated measures data (i.e. multiple measurements for each observation).
+
+```{r}
+print(head(billboard))
+
+billboard %>%
+  pivot_longer(
+    cols = starts_with("wk"),
+    names_to = "week",
+    values_to = "rank"
+  )
+```
+
+This is a good time to mention [select helper functions](https://dplyr.tidyverse.org/reference/select.html) that helps with easily selecting multiple columns that conform to a certain pattern. For example, `starts_with("wk")` lets me select all columns that start with `"wk"`.
+
+There are many other functions in these packages that are useful for data manipulation. There may be more functions that I use in this workshop that I have not covered here, but I will do my best to explain as I go along.
+
+## Exercise 1
+
+## Data Visualization with ggplot2
+
+Visualizing your data is a great way to understand the shape and trends in your data. Many statistical models and tests assume that your data is distributed in a certain way, and visualizing your data can help you determine if your data meets these assumptions.
+
+For visualization, we will be using the `ggplot2` package. `ggplot2` is covered in our R Fundamentals workshop, which you can access through [this link](https://github.com/nuitrcs/R-fundamentals-summer-workshop). The basic idea of `ggplot2` is to iteratively add "layers" to change different components of the plot. With `geom_*()` functions, you can choose the type of plot you would like to show (e.g. `geom_point()` for scatter plot, `geom_boxplot()` for boxplot). You can set axis scales with `xlim()`, `ylim()`, or `coord_cartesian()`. You can use `facet_grid()` or `facet_wrap()` to break down your plots into smaller subsets.
+
+First let's create a simple scatter plot between two continuous variables.
+
+```{r}
+ggplot(penguins) +
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm))
+```
+
+You can add color to the points to represent different groups by specifying `color=` inside the `aes()` function.
+
+```{r}
+# color by species
+ggplot(penguins) +
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  ggtitle("Bill Length vs Bill Depth", "by Species")
+
+# color by island
+ggplot(penguins) +
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm, color = island)) +
+  ggtitle("Bill Length vs Bill Depth", "by Island")
+```
+
+Let's try faceting the plot by year and look at body mass across species.
+
+```{r}
+ggplot(penguins) +
+  geom_boxplot(aes(x = species, y = body_mass_g)) +
+  facet_wrap(~year) +
+  ggtitle("Body Mass by Species", "Faceted by Year") +
+  xlab("Species") +
+  ylab("Boddy Mass (g)")
+```
+
+## Exercise 2
+
+# Cleaning and Summarizing Data
+
+## Data types
+
+Continuous variable
+
+Categorical variable
+
+## Missing Data
+
+1. Missing Completely at Random (MCAR)
+2. Missing at Random (MAR)
+3. Missing Not at Random (MNAR)
+
+```{r}
+# select any rows with missing data
+penguins %>% 
+  filter(if_any(everything(), is.na))
+```
+
+```{r}
+# check relationship between numeric variable and missingness in sex
+penguins %>%
+  # convert NA to a factor level
+  mutate(sex = fct_na_value_to_level(sex)) %>%
+  # pivot the table so that each row is a measurement of a variable 
+  # for each observation
+  pivot_longer(
+    cols = c(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g),
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  # plot distribution of each variable by sex status
+  ggplot() +
+  facet_wrap(~variable, scales = "free_y") +
+  geom_boxplot(aes(x = sex, y = value)) +
+  geom_jitter(aes(x = sex, y = value), alpha = 0.1, width = 0.3) +
+  ggtitle("Distribution of Numeric Variables")
+```
+
+## Exercise 3: Compare Missingness in Categorical Variables
+
+```{r}
+# check relationship between numeric variable and missingness in sex
+penguins  %>%
+  # convert year to factor
+  mutate(year = as.factor(year)) %>%
+  # pivot the table so that each row is a measurement of a variable 
+  # for each observation
+  pivot_longer(
+    cols = c(year, species, island),
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  count(variable, value, missing_sex = is.na(sex)) %>%
+  # plot distribution of each variable by sex status
+  ggplot() +
+  facet_wrap(~variable, scales = "free") +
+  geom_col(aes(x = value, y = n, fill = missing_sex), position = position_dodge(preserve = "single"))
+```
+
+No apparent trend in missing values. Potentially missing value is related to sex variable? Will need advise from domain expert who was involved in data collection.
+
+```{r}
+# drop observations with NA
+pgns <- penguins %>% drop_na()
+dim(pgns)
+```
+
+# Getting to Know Your Data a Little Better
+
+## Descriptive Statistics
+
+Useful functions for summarizing data: `mean()`, `sd()`, `median()`, `quantile()`, `min()`, `max()`.
+
+```{r}
+pgns %>%
+  group_by(island, species, sex) %>%
+  summarise(
+    n = n(),
+    across(
+      .cols = c(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g), 
+      .fns = list(mean = mean, sd = sd))
+  )
+```
+
+
+## Data Visualization
+
+### Distribution of a Continuous Variable
+
+```{r}
+ggplot(pgns) +
+  geom_histogram(aes(bill_length_mm)) +
+  ggtitle("Histogram of Bill Length (mm)")
+```
+
+```{r}
+g1 <- ggplot(pgns) +
+  geom_histogram(aes(bill_length_mm), binwidth = 5) +
+  ggtitle("Histogram of Bill Length (mm)", "binwidth = 5")
+g2 <- ggplot(pgns) +
+  geom_histogram(aes(bill_length_mm), binwidth = 1) +
+  ggtitle("Histogram of Bill Length (mm)", "binwidth = 1")
+g3 <- ggplot(pgns) +
+  geom_histogram(aes(bill_length_mm), binwidth = 0.5) +
+  ggtitle("Histogram of Bill Length (mm)", "binwidth = 0.5")
+g4 <- ggplot(pgns) +
+  geom_histogram(aes(bill_length_mm), binwidth = 0.1) +
+  ggtitle("Histogram of Bill Length (mm)", "binwidth = 0.1")
+
+ggarrange(g1, g2, g3, g4)
+```
+
+```{r}
+ggplot(pgns) +
+  geom_density(aes(x = bill_length_mm))
+```
+
+
+```{r}
+g1 <- ggplot(pgns) +
+  geom_histogram(aes(x = bill_length_mm, fill = species)) +
+  ggtitle("Distribution of Bill Length (mm)", "Color by Species")
+
+g2 <- ggplot(pgns) +
+  geom_density(aes(x = bill_length_mm, fill = species)) +
+  ggtitle("Distribution of Bill Length (mm)", "Color by Species")
+
+ggarrange(g1, g2, nrow = 1, common.legend = TRUE)
+```
+
+```{r}
+g1 <- ggplot(pgns) +
+  geom_boxplot(
+    aes(x = species, y = bill_length_mm, fill = island), 
+    position = position_dodge2(preserve = "single")
+  ) +
+  ggtitle("Distribution of Bill Length (mm)", "Color by Species")
+
+g2 <- ggplot(pgns) +
+  geom_violin(
+    aes(x = species, y = bill_length_mm, fill = island)
+  ) +
+  ggtitle("Distribution of Bill Length (mm)", "Color by Species")
+
+ggarrange(g1, g2, nrow = 1, common.legend = TRUE)
+```
+
+## Comparing Two Continuous Variables
+
+```{r}
+ggplot(pgns) +
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm))
+```
+
+```{r}
+ggplot(pgns) +
+  geom_point(aes(x = bill_length_mm, y = body_mass_g, color = species))
+```
+
+## Plot Descriptive Statistics
+
+```{r}
+pgns %>%
+  group_by(species, sex) %>%
+  summarise(
+    mean_body_mass = mean(body_mass_g),
+    sd_body_mass = sd(body_mass_g)
+  ) %>%
+  ggplot() +
+  geom_point(aes(x = species, y = mean_body_mass, color = sex)) +
+  geom_errorbar(aes(
+    x = species, 
+    ymin = mean_body_mass - sd_body_mass, 
+    ymax = mean_body_mass + sd_body_mass, 
+    color = sex
+  ))
+```
+
+```{r}
+ggplot(pgns, aes(x = species, y = body_mass_g, color = sex)) +
+  stat_summary(fun = mean) +
+  stat_summary(fun.data = "mean_sd", geom = "errorbar", width = 0.2)
+```
+
+```{r}
+ggplot(pgns, aes(x = species, y = body_mass_g, fill = sex)) +
+  stat_summary(fun = mean, geom = "bar", position = position_dodge(0.95)) +
+  stat_summary(fun.data = "mean_sd", geom = "errorbar", width = 0.2, position = position_dodge(0.95))
+```
