@@ -15,13 +15,15 @@ library(ggpubr)
 
 # Introduction
 
-Welcome to the `Statistical Modeling with R` workshop! In this workshop, we will go over different stages in statistical modeling with emphasis on coding in R. We will first review some of the core packages in the `tidyverse` framework, such as `dplyr` and `ggplot2`, which are used for data cleaning and data exploration. After that, we will apply statistical tests and create statistical model using functions from the `stats` package, which come with base R. Emphasis of this workshop will not be on the theoretical footing of these tests. Rather, we will learn the common syntax in R for running the statistical models and learn to leverage tools from `tidyverse` to check assumptions and visualize the model.
+Welcome to the `Statistical Modeling with R` workshop! In this workshop, we will go over different stages in statistical modeling with emphasis on coding in R. We will first review some of the core packages in the `tidyverse` framework, such as `dplyr` and `ggplot2`, which are used for data cleaning and data exploration. After that, we will move on to conducting statistical tests and creating statistical models in R.
+
+This workshop will not focus on the theoretical groundwork of these statistical. Rather, we will familiarize ourselves with the process of running statistical models R and learn to leverage tools from `tidyverse` to check assumptions and visualize the model output.
 
 This markdown document is part 1 of this workshop, which is a review of `tidyverse`.
 
 # Data
 
-For the majority of this workshop, we will be working with the `penguins` dataset from `palmerpenguins` package.
+For the majority of this workshop, we will be working with the `penguins` data set from `palmerpenguins` package.
 
 ```{r}
 head(penguins)
@@ -32,18 +34,6 @@ head(penguins)
 ```{r}
 glimpse(penguins)
 ```
-
-# Steps in Statistical Modeling Process
-
-1.  Define the research question and design the study
-2.  Collect data
-3.  Clean and explore data
-    -   Missing data
-    -   Outliers
-    -   Descriptive Statistics
-4.  Choose and fit a statistical test or model
-5.  Evaluate and criticize the fit of model
-6.  Draw inference
 
 # Quick Review of R
 
@@ -126,25 +116,7 @@ There are many other functions in these packages that are useful for data manipu
 Select observations where `sex` is not missing and from `Biscoe` island. Then count the number of rows from each species within `Biscoe`.
 
 ```{r}
-penguins %>% 
-  filter(is.na(!sex) & island == "Biscoe") %>%
-  group_by(species) %>%
-  summarise(n = n())
-```
 
-Bonus: Use `pivot_longer()` to transform the penguins data such that each observation is a measurement from one of `bill_length_mm`, `bill_depth_mm`, `flipper_length_mm`, or `body_mass_g` variable. Name the new column containing the variable as `variable` and the column containing the value as `measurement`.
-
-For example, the value of `variable` and `measurement` in the first row are `bill_length_mm` and `39.1`, respectively, and the second row would be `bill_depth_mm` and `18.7` respectively.
-
-Hint: imagine the variables as different "timepoints".
-
-```{r}
-penguins %>%
-  pivot_longer(
-    cols = c("bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g"),
-    names_to = "variable",
-    values_to = "measurement"
-  )
 ```
 
 ## Data Visualization with ggplot2
@@ -189,9 +161,9 @@ ggplot(penguins) +
 
 ## Exercise 2
 
-Plot the relationship between `species` and `body_mass_g`.
+Plot the relationship between `species` and `body_mass_g` using boxplot.
 
-Plot the relationship between `bill_depth` and `body_mass_g`. Color the points by `sex` variable.
+Plot the relationship between `bill_depth_mm` and `body_mass_g` using scatter plot. Color the points by `sex` variable.
 
 # Cleaning and Summarizing Data
 
@@ -209,9 +181,9 @@ When you start working with a data, one of the first things you want to do is ge
 glimpse(penguins)
 ```
 
-In R, you'll often see that the continuous variables are often represented by a `double` or `integer` data type. The categorical variables are often represented by `factor` or `character`. The type is shown within the angled brackets when using `glimpse()`.
+In R, you'll often see that the continuous variables are `double` or `integer`. The categorical variables are often `factor` or `character`. The type is shown inside the angled brackets when using `glimpse()`.
 
-For categorical variables, if you know what the possible categories are, it is often advantageous to convert the `character` data types to `factor`.
+For categorical variables, if you know what the possible categories are, it can be advantageous to convert the `character` data types to `factor`.
 
 -   This can potentially save lots of memory if you are dealing with lots of observations
 -   It protects you from inadvertently introducing a new category, which you might not have accounted for in your model.
@@ -261,22 +233,7 @@ penguins %>%
 ## Exercise 3: Compare Missingness in Categorical Variables
 
 ```{r}
-# check relationship between numeric variable and missingness in sex
-penguins  %>%
-  # convert year to factor
-  mutate(year = as.factor(year)) %>%
-  # pivot the table so that each row is a measurement of a variable 
-  # for each observation
-  pivot_longer(
-    cols = c(year, species, island),
-    names_to = "variable",
-    values_to = "value"
-  ) %>%
-  count(variable, value, missing_sex = is.na(sex)) %>%
-  # plot distribution of each variable by sex status
-  ggplot() +
-  facet_wrap(~variable, scales = "free") +
-  geom_col(aes(x = value, y = n, fill = missing_sex), position = position_dodge(preserve = "single"))
+
 ```
 
 No apparent trend in missing values. Potentially missing value is related to sex variable? Will need advise from domain expert who was involved in data collection.
@@ -291,7 +248,7 @@ dim(pgns)
 
 ## Descriptive Statistics
 
-You often want to get descriptive statistics of the data as a quick summary. You can also do quick group comparisons by utilizing the `group_by()` and `summarise()` functions from `dplyr`.
+You often want to get descriptive statistics to give a numerical summary of the data. You can also do quick group comparisons by utilizing the `group_by()` and `summarise()` functions from `dplyr`.
 
 Here are some useful functions for summarizing data: `mean()`, `sd()`, `median()`, `quantile()`, `min()`, `max()`.
 
@@ -307,6 +264,16 @@ pgns %>%
 ```
 
 Mean is commonly used to characterize the central tendency of the data. Be careful, though: mean is sensitive to outliers, so if you have data with outliers that is causing a heavy skew (i.e. not symmetrically distributed), you will want to use the median, which is more robust.
+
+```{r}
+set.seed(100)
+simdata <- data.frame(x = c(rgamma(200, shape = 0.7, scale = 8), rnorm(10, 80)))
+ggplot(simdata) +
+  geom_histogram(aes(x = x)) +
+  geom_vline(aes(xintercept = mean(x)), color = "blue") +
+  geom_vline(aes(xintercept = median(x)), color = "red") +
+  ggtitle("Skewed Distribution with Outliers", "Red Line: Median; Blue Line: Mean")
+```
 
 How do we determine if there's a skew or extreme outliers? This is where visualization comes in handy.
 
@@ -353,11 +320,10 @@ ggplot(pgns) +
 Try different `bw=` to see how it affects the density plot.
 
 ```{r}
-ggplot(pgns) +
-  geom_density(aes(x = bill_length_mm), bw = 0.1)
+
 ```
 
-You can easily compare the distribution across different groups by specifying `fill=`.
+You can compare the distribution across different groups by specifying `fill=`.
 
 ```{r}
 g1 <- ggplot(pgns) +
@@ -404,33 +370,73 @@ ggplot(pgns) +
   geom_point(aes(x = bill_length_mm, y = body_mass_g, color = species))
 ```
 
-## Bonus: Plot Descriptive Statistics
+## Distribution of Categorical Variables
 
-Finally, there is one more useful feature in ggplot that you can add to your arsenal. This is `stat_summary()`.
-
-If I want to create a plot comparing the means across different groups (for example, crossing between sex and species), I might approach it the following way. Here, I transformed the original data set in such a way that I have the mean and standard deviation for each group, and then used the resulting data set to plot the means with +- 1 std using `geom_point()` and `geom_errorbar()`.
+For looking at how categorical variables are distributed, you're often interested in relative counts. Bar plots are appropriate for comparing counts.
 
 ```{r}
-# calculate group means and standard deviation
-pgns %>%
+ggplot(pgns) +
+  geom_bar(aes(x = species)) +
+  ggtitle("Distribution of Species")
+```
+
+You can use `fill=` to further break down the plots into a second grouping variable.
+
+```{r}
+g1 <- ggplot(pgns) +
+  geom_bar(aes(x = species, fill = sex)) +
+  ggtitle("Distribution of Sex by Species")
+
+# setting position = position_dodge(1) splits the bars for each sub-group
+g2 <- ggplot(pgns) +
+  geom_bar(aes(x = species, fill = sex), position = position_dodge(1)) +
+  ggtitle("Distribution of Sex by Species", "with position_dodge(1)")
+ggarrange(g1, g2, nrow = 1, common.legend = TRUE)
+```
+
+## Exercise 5
+
+Plot the relationship between bill depth and flipper length. Also, try coloring points by different grouping variables.
+
+```{r}
+
+```
+
+## Bonus: Plot Descriptive Statistics
+
+Finally, there is one more useful feature in ggplot that you can add to your toolbelt. This is `stat_summary()`.
+
+If I want to create a plot comparing the means across different groups (for example, crossing the levels between sex and species), I might approach it the following way. Here, I use the original data set to get the mean and standard deviation for each group, and then used the resulting table to plot the means with +- 1 std using `geom_point()` and `geom_errorbar()`.
+
+```{r}
+grouped_summary <- pgns %>%
   group_by(species, sex) %>%
   summarise(
     mean_body_mass = mean(body_mass_g),
     sd_body_mass = sd(body_mass_g)
-  ) %>%
-  ggplot() +
+  )
+
+print(grouped_summary)
+
+# calculate group means and standard deviation
+ggplot(grouped_summary) +
   geom_point(aes(x = species, y = mean_body_mass, color = sex)) +
+  # geom_errorbar() takes ymin and ymax aesthetic variables to draw an errorbar
   geom_errorbar(aes(
     x = species, 
     ymin = mean_body_mass - sd_body_mass, 
     ymax = mean_body_mass + sd_body_mass, 
-    color = sex
+    color = sex, 
+    width = 0.2
   ))
 ```
 
-`stat_summary()` takes your original data, summarizes the data using the desired function, and plots based on the summarized output. Grouping structure can be defined by `x` and other mapping aesthetics such as `color`, `fill`, `shape`, etc.
+`stat_summary()` takes your original data, summarizes the data using the desired function, and plots the summary - all in one step! Grouping structure is defined by `x` and other mapping aesthetics such as `color`, `fill`, `shape`, etc.
 
-The `fun=` argument takes in a function used to summarize the data, and `geom=` defines what geometric object is used to display the data. The values for `geom=` are what you see in the `geom_*()` functions. For example, to plot a point for the transformed data, you can set `geom="point"`.
+Arguments inside `stat_summary()`:
+
+-    `fun=` argument takes in a function used to summarize the data
+-   `geom=` defines what geometric object is used to display the data. The values for `geom=` are what you see in the `geom_*()` functions. For example, to plot a point for the transformed data, you can set `geom="point"`.
 
 ```{r}
 ggplot(pgns, aes(x = species, y = body_mass_g, color = sex)) +
@@ -442,4 +448,57 @@ ggplot(pgns, aes(x = species, y = body_mass_g, color = sex)) +
 ggplot(pgns, aes(x = species, y = body_mass_g, fill = sex)) +
   stat_summary(fun = mean, geom = "bar", position = position_dodge(0.95)) +
   stat_summary(fun.data = "mean_sd", geom = "errorbar", width = 0.2, position = position_dodge(0.95))
+```
+
+# Exercise Solutions
+
+## Exercise 1
+
+```{r}
+penguins %>% 
+  filter(is.na(!sex) & island == "Biscoe") %>%
+  group_by(species) %>%
+  summarise(n = n())
+```
+
+## Exercise 2
+
+```{r}
+ggplot(penguins) + geom_boxplot(aes(x = species, y = body_mass_g))
+ggplot(penguins) + geom_point(aes(x = bill_depth_mm, y = body_mass_g, color = sex))
+```
+
+## Exercise 3
+
+```{r}
+# check relationship between numeric variable and missingness in sex
+penguins  %>%
+  # convert year to factor
+  mutate(year = as.factor(year)) %>%
+  # pivot the table so that each row is a measurement of a variable 
+  # for each observation
+  pivot_longer(
+    cols = c(year, species, island),
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  count(variable, value, missing_sex = is.na(sex)) %>%
+  # plot distribution of each variable by sex status
+  ggplot() +
+  facet_wrap(~variable, scales = "free") +
+  geom_col(aes(x = value, y = n, fill = missing_sex), position = position_dodge(preserve = "single"))
+```
+
+## Exercise 4
+
+```{r}
+ggplot(pgns) +
+  geom_density(aes(x = bill_length_mm), bw = 0.1)
+```
+
+## Exercise 5
+
+```{r}
+ggplot(pgns) +
+  geom_point(aes(x = bill_depth_mm, y = flipper_length_mm, color = species))
 ```
