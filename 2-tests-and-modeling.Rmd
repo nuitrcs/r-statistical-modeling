@@ -21,15 +21,29 @@ pgns <- penguins %>%
   )
 ```
 
-Although I won't dive too deeply into the theoretical aspects of it, I will still present the tests in a formal definition. I will also provide a brief explanation of the test and how to interpret the results.
-
 # Introduction
 
-For some of these illustrations I will use simulated data. The functions we commonly use for simulation are `sample()` for randomly choosing a sample from data, and `rnorm()`, `rbinom()`, `runif()` (and more depending on the type of distribution you are interested in!) for sampling random variables from a distribution.
+In part 2 of this workshop, we will learn how to run statistical tests and models in R. We will consider some scenarios in which I want to test some hypothesis. For example, the questions can be "are two categorical variables related in some way, or are they independent?" or "are the means of a continuous variable equal across two groups?". The type of test or model that you use depends on what kind of variables you are dealing with and what the hypothesis tests for.
 
-Another very useful function for simulation is `replicate()` function; it is a wrapper for repeatedly running a piece of code, usually involving random number generation.
+### Note on Assumptions
 
-To illustrate `sample()` function, imagine that rolling a fair 6-sided die 5 times. To simulate this, I could write:
+Each of these tests make a set of **assumptions** about your data, which need to be met in order to provide a valid result. In reality, your data often do not fully meet these assumptions. In fact, serious violations of some assumptions can negatively impact your model by increasing type I error (false positive finding) or decreasing power (false negative finding).
+
+Do not be discouraged though - many of these tests are **robust** to mild violation of some assumptions. Therefore, it is important to check these assumptions in your data: the goal is not to check if assumptions are entirely fulfilled, but rather to see if there is any serious violation of assumptions. One of the ways to check these assumptions is to use graphical methods. This is where our familiarity with data manipulation tools and `ggplot2` will come into light.
+
+### Quick Note on Hypothesis Testing
+
+Hypothesis testing is a procedure in which you make a statement about a population and you put that to the test. Typically you define a null hypothesis ($H_0$) and alternative hypothesis ($H_a$ or $H_1$) that depends on your research question. The null hypothesis will dictate how your data **should** be distributed. You then use the data obtained to measure the evidence **against** the null hypothesis.
+
+One of the ways we quantify this is with **p-value**, which measures the probability of observing the data, or data with more unlikely outcome under the null hypothesis (assuming that the model and the sample is representative of the population).
+
+As I present the statistical models and tests, I will also include the null and alternative hypotheses to illustrate what is being tested in these procedures.
+
+### Simulation
+
+For some of these illustrations I will use simulated data. The functions we commonly use for simulation are `sample()` for randomly sampling from data.
+
+To illustrate `sample()` function, imagine rolling a fair 6-sided die 5 times. To simulate this, I could write:
 
 ```{r}
 sample(
@@ -55,19 +69,11 @@ prop.table(table(x)) %>%
 
 It does look close enough, so the die must be fair. Instead of looking at the plot, we could also quantitatively determine if we should believe that the die is fair by using statistical tests.
 
-## Quick Note on Hypothesis Testing
-
-Hypothesis testing is a procedure in which you make a statement about a population and you put that to the test. Typically you define a null hypothesis ($H_0$) and alternative hypothesis ($H_a$ or $H_1$) that depends on your research question. The null hypothesis will dictate how your data **should** be distributed. You then use the data obtained to measure the evidence **against** the null hypothesis.
-
-One of the ways we quantify this is with p-value, which measures the probability of observing the data, or data with more unlikely outcome under the null hypothesis (assuming that the model and the sample is representative of the population).
-
-As I present the statistical models and tests, I will also include the null and alternative hypotheses to illustrate what is being tested in these procedures.
-
-## Word About assumptions
-
 ## Categorical Data Analysis
 
 ### Chi-Squared Test for Goodness-of-Fit
+
+In the die simulation I performed above we have one categorical variable: *outcome of a roll*, which can be one of 1, 2, 3, 4, 5, or 6.
 
 First test we will look at is a Chi-Squared Goodness-of-Fit test. This tests if a categorical outcome follows a certain distribution.
 
@@ -82,12 +88,22 @@ $H_0: p_1 = p_2 = p_3 = p_4 = p_5 = p_6 = \frac{1}{6}$
 
 $H_0: \text{At least one of } p_i \neq \frac{1}{6}$
 
+```{r, eval=FALSE}
+# read chisq.test documentation
+?chisq.test
+```
+
 ```{r}
 x_table <- table(x)
+print(x_table)
+
+# Chi-Squared Goodness-of-Fit test
 chisq.test(x = x_table, p = rep(1/6, 6))
 ```
 
 ### Chi-Squared Test of Independence
+
+If we want to check if two categorical variables are independent, then we can run Chi-Squared test of Independence. Perhaps I am more likely to flip heads when I flip with my right hand over my left hand. Or maybe these two things are independent and proportion of heads stays the same regardless of which hand I use to flip.
 
 Assumptions:
 
@@ -107,7 +123,27 @@ head(ucbdf)
 
 Each row represents a student with information about the student's sex, department the student applied to, and the final admit decision.
 
-Let's see if there is relationship between admit decision and sex. Since they are both categorical variables, we can use Chi-Squared test of Independence.
+Let's try to test there is relationship between admit decision and sex.
+
+```{r}
+prop_admission <- ucbdf %>%
+  # get number of observations per Sex-Admit combination
+  count(Sex, Admit) %>%
+  # get proportion of Admission and Rejection per Sex
+  group_by(Sex) %>%
+  mutate(prop_admit = n / sum(n))
+prop_admission
+
+ggplot(ucbdf) +
+  geom_bar(aes(x = Sex, fill = Admit), position = position_dodge(1)) +
+  ggtitle("Number of Admissions by Sex")
+
+ggplot(prop_admission) +
+  geom_col(aes(x = Sex, y = prop_admit, fill = Admit)) +
+  ggtitle("Proportion of Admissions by Sex")
+```
+
+Since they are both categorical variables, we can use Chi-Squared test of Independence.
 
 $H_0: \text{Admit decision and sex are independent}$
 
@@ -117,31 +153,32 @@ $H_a: \text{Admit decision and sex are not independent}$
 chisq.test(x = ucbdf$Admit, y = ucbdf$Sex)
 ```
 
-Looks like we get a significant result. Let's visualize the data to see the differences.
-
-```{r}
-ucbdf %>%
-  group_by(Sex, Admit) %>%
-  count() %>%
-  group_by(Sex) %>%
-  mutate(prop = n / sum(n)) %>%
-  ggplot() +
-  geom_col(aes(x = Sex, y = prop, fill = Admit))
-```
-
 ### Exercise 1
 
-Chi squared test for each subset?
+Before we rush to make some claim about the admission process, let's look at one more thing. There's an department variable in the data set. For this exercise, I would like you to use either `facet_grid()` or `facet_wrap()` to stratify by `Dept` and create a bar plots comparing admission rate between sex. Sincere there are 6 departments, you should get 6 separate bar plots.
+
+Then, try running `chisq.test` for each department between sex and admission.
 
 ```{r}
 ucbdf %>%
-  group_by(Dept, Sex, Admit) %>%
-  count() %>%
-  group_by(Dept, Sex) %>%
-  mutate(prop = n / sum(n)) %>%
   ggplot() +
   facet_wrap(~Dept) +
-  geom_col(aes(x = Sex, y = prop, fill = Admit))
+  geom_bar(aes(x = Sex, fill = Admit), position = position_dodge(1))
+
+depA <- ucbdf %>% filter(Dept == "A")
+depB <- ucbdf %>% filter(Dept == "B")
+depC <- ucbdf %>% filter(Dept == "C")
+depD <- ucbdf %>% filter(Dept == "D")
+depE <- ucbdf %>% filter(Dept == "E")
+depF <- ucbdf %>% filter(Dept == "F")
+
+chisq.test(depA$Admit, depA$Sex)
+chisq.test(depB$Admit, depB$Sex)
+chisq.test(depC$Admit, depC$Sex)
+chisq.test(depD$Admit, depD$Sex)
+chisq.test(depE$Admit, depE$Sex)
+chisq.test(depF$Admit, depF$Sex)
+
 ```
 
 ## Continuous Variable (Mean Comparison)
