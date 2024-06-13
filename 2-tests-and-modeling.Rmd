@@ -7,6 +7,8 @@ date: "2024-06-05"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+set.seed(1234)
+
 library(palmerpenguins)
 library(tidyverse)
 library(broom)
@@ -21,21 +23,30 @@ pgns <- penguins %>%
   )
 ```
 
+```{r}
+accessible <- TRUE
+if (accessible) {
+  mypal <- unname(palette.colors(palette = "Okabe-Ito"))
+  options(ggplot2.discrete.colour = mypal)
+  options(ggplot2.discrete.fill = mypal)
+}
+```
+
 # Introduction
 
 In part 2 of this workshop, we will learn how to run statistical tests and models in R. We will consider some scenarios in which I want to test some hypothesis. For example, the questions can be "are two categorical variables related in some way, or are they independent?" or "are the means of a continuous variable equal across two groups?". The type of test or model that you use depends on what kind of variables you are dealing with and what the hypothesis tests for.
 
 ### Note on Assumptions
 
-Each of these tests make a set of **assumptions** about your data, which need to be met in order to provide a valid result. In reality, your data often do not fully meet these assumptions. In fact, serious violations of some assumptions can negatively impact your model by increasing type I error (false positive finding) or decreasing power (false negative finding).
+Each of these tests make a set of **assumptions** about your data, which need to be met in order to provide a valid result. In reality, your data often do not fully meet these assumptions. In fact, serious violations of some assumptions can negatively impact your model by increasing type I error (false positive finding) or decreasing the likelihood of finding true effects.
 
 Do not be discouraged though - many of these tests are **robust** to mild violation of some assumptions. Therefore, it is important to check these assumptions in your data: the goal is not to check if assumptions are entirely fulfilled, but rather to see if there is any serious violation of assumptions. One of the ways to check these assumptions is to use graphical methods. This is where our familiarity with data manipulation tools and `ggplot2` will come into light.
 
 ### Quick Note on Hypothesis Testing
 
-Hypothesis testing is a procedure in which you make a statement about a population and you put that to the test. Typically you define a null hypothesis ($H_0$) and alternative hypothesis ($H_a$ or $H_1$) that depends on your research question. The null hypothesis will dictate how your data **should** be distributed. You then use the data obtained to measure the evidence **against** the null hypothesis.
+Hypothesis testing is a procedure in which you make a statement about a population and you put that to the test. Typically you define a null hypothesis ($H_0$) and alternative hypothesis ($H_a$ or $H_1$) that depends on your research question. The null hypothesis species how your data are distributed in the population. You then use the data obtained to measure the evidence **against** the null hypothesis.
 
-One of the ways we quantify this is with **p-value**, which measures the probability of observing the data, or data with more unlikely outcome under the null hypothesis (assuming that the model and the sample is representative of the population).
+One of the ways we quantify this is with a **p-value**, which measures the probability of observing the data, or data with more unlikely outcome under the null hypothesis (assuming that the model and the sample is representative of the population).
 
 As I present the statistical models and tests, I will also include the null and alternative hypotheses to illustrate what is being tested in these procedures.
 
@@ -49,7 +60,7 @@ To illustrate `sample()` function, imagine rolling a fair 6-sided die 5 times. T
 sample(
   x = 1:6, # defines a set of possible outcomes from a random experiment
   size = 5, # number of times I would like to sample
-  replace = TRUE # TRUE indicates that I could get the same sample in the sampling procedure
+  replace = TRUE # TRUE indicates that I could get the same outcome in the sampling procedure
 )
 ```
 
@@ -82,7 +93,7 @@ Assumptions:
 -   The variable of interest is categorical
 -   Levels in the categorical variables are mutually exclusive
 -   The observations are independent of one another
--   Expected value of cells should be \> 5
+-   Expected value of cells shouldn't be too small (old rule of thumb is \> 5)
 
 $H_0: p_1 = p_2 = p_3 = p_4 = p_5 = p_6 = \frac{1}{6}$
 

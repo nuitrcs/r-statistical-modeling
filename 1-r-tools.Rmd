@@ -13,6 +13,15 @@ library(tidyverse)
 library(ggpubr)
 ```
 
+```{r}
+# accessible color
+accessible <- TRUE
+if (accessible) {
+  options(ggplot2.discrete.colour = unname(palette.colors(palette = "Okabe-Ito")))
+  options(ggplot2.discrete.fill = unname(palette.colors(palette = "Okabe-Ito")))
+}
+```
+
 # Introduction
 
 Welcome to the `Statistical Modeling with R` workshop! In this workshop, we will go over different stages in statistical modeling with emphasis on coding in R. We will first review some of the core packages in the `tidyverse` framework, such as `dplyr` and `ggplot2`, which are used for data cleaning and data exploration. After that, we will move on to conducting statistical tests and creating statistical models in R.
@@ -139,7 +148,7 @@ You can add color to the points to represent different groups by specifying `col
 ```{r}
 # color by species
 ggplot(penguins) +
-  geom_point(aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm, colour = species)) +
   ggtitle("Bill Length vs Bill Depth", "by Species")
 
 # color by island
@@ -164,6 +173,10 @@ ggplot(penguins) +
 Plot the relationship between `species` and `body_mass_g` using boxplot.
 
 Plot the relationship between `bill_depth_mm` and `body_mass_g` using scatter plot. Color the points by `sex` variable.
+
+```{r}
+
+```
 
 # Cleaning and Summarizing Data
 
@@ -200,6 +213,12 @@ Although the data type is `integer` and I could interpret this as a continuous d
 
 ## Missing Data
 
+Dealing with missing data is an important part of statistical analysis. There can be different reasons for missing data, and depending on the mechanism it can impact the performance of your model. Sometimes it might not affect your model substantively. Other times it can bias your results and possibly invalidate your finding. Therefore it is important to understand why the data is missing and deal with it accordingly.
+
+The subject on missing data is an important field of research in statistics and data science, and going in depth about exploring missingness and different methods for dealing with them warrants another workshop. Here, we will briefly go over some important notions, and try out some packages specifically made for visualizing missing data.
+
+There are largely 3 mechanisms in which data can be missing in an increasing order of potential threat to your analysis.
+
 1.  Missing Completely at Random (MCAR)
 2.  Missing at Random (MAR)
 3.  Missing Not at Random (MNAR)
@@ -209,6 +228,10 @@ Although the data type is `integer` and I could interpret this as a continuous d
 penguins %>% 
   filter(if_any(everything(), is.na))
 ```
+
+There are many great options for visualizing missingness pattern. You can choose to explore yourself using `ggplot2`. There are many packages available [online](https://cran.r-project.org/web/views/MissingData.html#exploration) for this purpose.
+
+In the penguins dataset, most of the missing data were in the sex of the penguins. While looking at different relationships, I found something interesting:
 
 ```{r}
 # check relationship between numeric variable and missingness in sex
@@ -230,19 +253,17 @@ penguins %>%
   ggtitle("Distribution of Numeric Variables")
 ```
 
-## Exercise 3: Compare Missingness in Categorical Variables
+Could this indicate that many of the penguins with missing sex are females? What you decide to do from here depends on several factors. In this case, I only have 11 penguins with missing sex out of 344, which is only 3% of the data. Since this is a small portion of data, I might decide that it is not worthwhile to try to retrieve the data points and that removal of these points will not substantially change the outcome of my analysis.
 
-```{r}
-
-```
-
-No apparent trend in missing values. Potentially missing value is related to sex variable? Will need advise from domain expert who was involved in data collection.
+Here I will take that approach and do **listwise** deletion, which excludes data points with any single missing value.
 
 ```{r}
 # drop observations with NA
 pgns <- penguins %>% drop_na()
 dim(pgns)
 ```
+
+Another alternative, which I might have considered if there were more missing data points, is try to do **imputation**, which is a process of filling the missing values with best guess.
 
 # Getting to Know Your Data a Little Better
 
@@ -315,7 +336,7 @@ ggplot(pgns) +
   geom_density(aes(x = bill_length_mm))
 ```
 
-## Exercise 4
+## Exercise 3
 
 Try different `bw=` to see how it affects the density plot.
 
@@ -394,7 +415,7 @@ g2 <- ggplot(pgns) +
 ggarrange(g1, g2, nrow = 1, common.legend = TRUE)
 ```
 
-## Exercise 5
+## Exercise 4
 
 Plot the relationship between bill depth and flipper length. Also, try coloring points by different grouping variables.
 
@@ -435,7 +456,7 @@ ggplot(grouped_summary) +
 
 Arguments inside `stat_summary()`:
 
--    `fun=` argument takes in a function used to summarize the data
+-   `fun=` argument takes in a function used to summarize the data
 -   `geom=` defines what geometric object is used to display the data. The values for `geom=` are what you see in the `geom_*()` functions. For example, to plot a point for the transformed data, you can set `geom="point"`.
 
 ```{r}
@@ -471,32 +492,11 @@ ggplot(penguins) + geom_point(aes(x = bill_depth_mm, y = body_mass_g, color = se
 ## Exercise 3
 
 ```{r}
-# check relationship between numeric variable and missingness in sex
-penguins  %>%
-  # convert year to factor
-  mutate(year = as.factor(year)) %>%
-  # pivot the table so that each row is a measurement of a variable 
-  # for each observation
-  pivot_longer(
-    cols = c(year, species, island),
-    names_to = "variable",
-    values_to = "value"
-  ) %>%
-  count(variable, value, missing_sex = is.na(sex)) %>%
-  # plot distribution of each variable by sex status
-  ggplot() +
-  facet_wrap(~variable, scales = "free") +
-  geom_col(aes(x = value, y = n, fill = missing_sex), position = position_dodge(preserve = "single"))
-```
-
-## Exercise 4
-
-```{r}
 ggplot(pgns) +
   geom_density(aes(x = bill_length_mm), bw = 0.1)
 ```
 
-## Exercise 5
+## Exercise 4
 
 ```{r}
 ggplot(pgns) +
