@@ -121,75 +121,76 @@ Assumptions:
 -   The two variables are categorical
 -   Levels in the categorical variable are mutually exclusive
 -   The observations are independent of one another
--   Expected value of cells should be \> 5
+-   Expected value of cells shouldn't be too small (old rule of thumb is \> 5)
 
-For this exercise we will use a `UCBAdmissions` dataset, which is available at `data/UCBAdmissions.csv`
+To illustrate this statistical test we will use a Covid-19 briefing [dataset](https://www.openintro.org/data/index.php?data=simpsons_paradox_covid) from UK in 2021.
 
 ```{r}
-ucbdf <- read.csv("data/UCBAdmission2.csv")
-ucbdf <- ucbdf %>%
-  mutate(Admit = factor(Admit), Sex = factor(Sex))
-head(ucbdf)
+covid <- read.table("https://www.openintro.org/data/tab-delimited/simpsons_paradox_covid.txt", header = TRUE, sep = "\t")
+print(head(covid))
 ```
 
-Each row represents a student with information about the student's sex, department the student applied to, and the final admit decision.
+Each row represents an individual with information about the person's age group (under 50 and 50 +), vaccination status, and whether the individual has died or survived.
 
-Let's try to test there is relationship between admit decision and sex.
+Let's try to see if there is a relationship between vaccine status and outcome.
 
 ```{r}
-prop_admission <- ucbdf %>%
-  # get number of observations per Sex-Admit combination
-  count(Sex, Admit) %>%
-  # get proportion of Admission and Rejection per Sex
-  group_by(Sex) %>%
-  mutate(prop_admit = n / sum(n))
-prop_admission
-
-ggplot(ucbdf) +
-  geom_bar(aes(x = Sex, fill = Admit), position = position_dodge(1)) +
+# create barplot
+ggplot(covid) +
+  geom_bar(aes(x = vaccine_status, fill = outcome), position = position_dodge(1)) +
   ggtitle("Number of Admissions by Sex")
 
-ggplot(prop_admission) +
-  geom_col(aes(x = Sex, y = prop_admit, fill = Admit)) +
-  ggtitle("Proportion of Admissions by Sex")
+# barplot might not be so useful -- can instead calculate proportions and 
+# plot that on barplot
+prop_covid <- covid %>%
+  # get number of observations per Sex-Admit combination
+  count(vaccine_status, outcome) %>%
+  # get proportion of Admission and Rejection per Sex
+  group_by(vaccine_status) %>%
+  mutate(prop_outcome = n / sum(n))
+prop_covid
+
+prop_covid %>%
+  filter(outcome == "death") %>%
+  ggplot() +
+  # if I have a column for the bar's height, can use geom_col()
+  geom_col(aes(x = vaccine_status, y = prop_outcome)) +
+  ggtitle("Proportion of Death Outcome by Vaccination Status")
 ```
 
 Since they are both categorical variables, we can use Chi-Squared test of Independence.
 
-$H_0: \text{Admit decision and sex are independent}$
+$H_0: \text{Vaccination status and outcome are independent}$
 
-$H_a: \text{Admit decision and sex are not independent}$
+$H_a: \text{Vaccination status and outcome are not independent}$
 
 ```{r}
-chisq.test(x = ucbdf$Admit, y = ucbdf$Sex)
+chisq.test(x = covid$vaccine_status, y = covid$outcome)
 ```
 
 ### Exercise 1
 
-Before we rush to make some claim about the admission process, let's look at one more thing. There's an department variable in the data set. For this exercise, I would like you to use either `facet_grid()` or `facet_wrap()` to stratify by `Dept` and create a bar plots comparing admission rate between sex. Sincere there are 6 departments, you should get 6 separate bar plots.
+Using the same data set, let's look at one more thing. There's an `age_group` variable in the data set. For this exercise, I would like you to use either `facet_grid()` or `facet_wrap()` to stratify by `age_group` and create a bar plots comparing outcome proportion between vaccination status. Since there are 2 age groups, you should get 2 separate bar plots.
+
+Since death is rare case in the dataset, instead of comparing the raw counts, I would suggest calculating the proportions as we did before.
 
 Then, try running `chisq.test` for each department between sex and admission.
 
 ```{r}
-ucbdf %>%
+covid %>%
+  count(age_group, vaccine_status, outcome) %>%
+  group_by(age_group, vaccine_status) %>%
+  mutate(proportion = n / sum(n)) %>%
+  filter(outcome == "death") %>%
   ggplot() +
-  facet_wrap(~Dept) +
-  geom_bar(aes(x = Sex, fill = Admit), position = position_dodge(1))
+  facet_wrap(~age_group, scales = "free") +
+  geom_col(aes(x = vaccine_status, y = proportion))
 
-depA <- ucbdf %>% filter(Dept == "A")
-depB <- ucbdf %>% filter(Dept == "B")
-depC <- ucbdf %>% filter(Dept == "C")
-depD <- ucbdf %>% filter(Dept == "D")
-depE <- ucbdf %>% filter(Dept == "E")
-depF <- ucbdf %>% filter(Dept == "F")
+covid_under_50 <- covid %>% filter(age_group == "under 50")
+covid_over_50 <- covid %>% filter(age_group == "50 +")
 
-chisq.test(depA$Admit, depA$Sex)
-chisq.test(depB$Admit, depB$Sex)
-chisq.test(depC$Admit, depC$Sex)
-chisq.test(depD$Admit, depD$Sex)
-chisq.test(depE$Admit, depE$Sex)
-chisq.test(depF$Admit, depF$Sex)
-
+chisq.test(x = covid_under_50$vaccine_status, y = covid_under_50$outcome)
+chisq.test(x = covid_over_50$vaccine_status, y = covid_over_50$outcome)
 ```
 
 ## Continuous Variable (Mean Comparison)
@@ -295,7 +296,7 @@ my_aov <- aov(body_mass_g ~ species, data = pgns)
 print(my_aov)
 ```
 
-### Exercise
+### Exercise 2
 
 Compare `body_mass_g` across islands. Plot distributions to check assumptions, and then run `aov()`.
 
@@ -392,7 +393,12 @@ $Y_i = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + ... + \beta_pX_{ip} + \epsilon_
 
 Where $Y_i$ is the outcome of the ith observation, $X_ik$ is the ith observation of the kth dependent variable, and $\epsilon_i$ is the error term
 
-Assumptions: - There is a linear relationship between X and the mean of Y - Observations are independent of each other. - The variance of the error term is the same for any value of X (homoskedasticity) - The error term is normally distributed with mean 0
+Assumptions:
+
+-   There is a linear relationship between X and the mean of Y
+-   Observations are independent of each other.
+-   The variance of the error term is the same for any value of X (homoskedasticity)
+-   The error term is normally distributed with mean 0
 
 First let's try simple linear regression. Suppose I am modelling a relationship between flipper length and body mass.
 
@@ -436,7 +442,7 @@ Here are the plots for model diagnostics
 plot(mymodel2)
 ```
 
-Exercise:
+### Exercise 3
 
 In previous ANOVA example we saw significant differences between islands, but in linear regression it now looks like the effects are not statistical significant. Can you make a plot to explain why this is a case?
 
@@ -445,9 +451,9 @@ ggplot(pgns) +
   geom_boxplot(aes(x = island, y = body_mass_g, fill = species))
 ```
 
-Exercise:
+### Exercise 4
 
-After looking at this plot, I also suspect that there is an interaction between species and sex. In other words, I suspect that the relationship between sex and body weight depends on the species. Can you create a linear model to capturer this behavior? What p-value did you get?
+After looking at this plot, I also suspect that there is an interaction between species and sex. In other words, I suspect that the relationship between sex and body weight depends on the species. Can you create a linear model to capture this behavior? What p-value did you get?
 
 ```{r}
 ggplot(pgns) + 
@@ -460,7 +466,7 @@ summary(mymodel3)
 plot(mymodel3)
 ```
 
-## Using `broom()` Package
+## Using `broom` Package
 
 Instead of just looking at the model output, you might also want to retrieve some aspects of the model as a data frame for visualization or comparison across models.
 
@@ -503,6 +509,8 @@ augment(mymodel2)
 
 New columns start with `.` to avoid overwriting original columns.
 
+`glance()` contains summary used to describe things like the fit of the model, such as R-squared or the F-Statistic.
+
 ```{r}
 glance(mymodel2)
 ```
@@ -518,3 +526,99 @@ mymodel2 %>%
   geom_text(aes(label = rn), vjust = 1.5) +
   ggtitle("Recreate Residuals vs Leverage")
 ```
+
+## Generalized Linear Model: Logistic Regression
+
+If you have an outcome variable that is categorical (e.g. sex, species) or numeric but not necessarily continuous (e.g. count), then Generalized Linear Model can be an option. Depending on the type of outcome variable that you have you can use a different class of GLM:
+
+-   For a binary outcome, consider **Logistic Regression**
+-   For count outcome, consider **Poisson Regression**
+-   For continuous non-negative outcome, consider **Gamma Distribution**
+
+Let's consider a case in which we would like to predict `sex` in the penguins data set we've been using.
+
+```{r}
+table(pgns$sex)
+```
+
+Since `sex` is either male or female in the data set, we have a binary outcome, so we can use logistic regression. Following is a mathematical formulation of the logistic regression model:
+
+$$
+log\big(\frac{p}{1-p}\big) = \beta_0 + \beta_1x_1 + \beta_2x_2...
+$$
+
+This looks very similar to the linear regression except for the left part. The $p$ represents a probability. In our example, if we set female = 0 and male = 1, then $p$ is the probability that a penguin is a male. The term inside the log, $\frac{p}{1-p}$ represents the **odds**. Higher value indicates higher probability of an event.
+
+The function $f(x) = log\big(\frac{x}{1-x}\big)$ is called **logit**, and this is essentially what "links" our outcome of interest to the linear prediction.
+
+We can use `glm()` to run generalized logistic regression. Syntax is very similar to `lm()`, but now we also specify `family=` to tell R which type of regression to run with which link function.
+
+```{r}
+logreg_model <- glm(
+  formula = sex ~ species + bill_length_mm + bill_depth_mm + flipper_length_mm + body_mass_g, 
+  data = pgns, 
+  family = binomial(link = "logit")
+)
+summary(logreg_model)
+```
+
+We can see that `broom` package functions also support logistic regression:
+
+```{r}
+logreg_model %>%
+  broom::tidy()
+```
+
+An exponentiation of these coefficients might be more interpretable, which represents the odds ratio. Values greater than 1 means that an increase in that predictor makes the outcome more likely too occur; in this case, higher probability of a penguin being a male.
+
+```{r}
+logreg_model %>%
+  broom::tidy(exp = TRUE)
+```
+
+You can also use `augment()` to get the fitted values. In logistic regression model, the value on the dependent variable side is the log odds, so that's the default output for the fitted value.
+
+```{r}
+logreg_model %>%
+  augment()
+```
+
+To get the probability output, you can set `type.predict = "response"` inside the function. Using this probabiliy, we could make a prediction rule. For example, if the probability is over 0.50, we predict that the penguin is a male.
+
+```{r}
+prediction_df <- logreg_model %>%
+  # get fitted values
+  augment(type.predict = "response") %>%
+  # predict penguin sex
+  mutate(predicted_sex = ifelse(.fitted >= 0.5, "male", "female")) %>%
+  select(sex, predicted_sex, .fitted)
+print(head(prediction_df))
+table(predicted = prediction_df$predicted_sex, actual = prediction_df$sex)
+```
+
+You can learn more about other options by running `?augment.glm()`.
+
+### Exercise 5
+
+In this section we learned how to predict categories using logistic regression. Predicting categorical outcome is often referred to as classification problem in machine learning.
+
+One common way to assess the model for binary classification problem is to calculate what is called the Area Under the [Receiver Operating Characteristic Curve](https://en.wikipedia.org/wiki/Receiver_operating_characteristic) (ROC).
+
+There are many R packages that calculate the AUROC, but we will use the `pROC` package.
+
+```{r}
+# will install pROC package if it does not exist
+if (!require("pROC")) install.packages("pROC")
+```
+
+The documentation from `?pROC` tells us that we can use the `roc()` function to build a ROC curve, with which we can calculate the AUROC and plot them. To build the ROC curve, we can pass the true label (aka `sex` in our example) as a first argument and predicted probability as a second argument.
+
+I would like you to build the curve, find out the AUROC, and plot the ROC curve. Here's a basic template:
+
+```{r, error = TRUE}
+myROC <- roc(first_argument_here, second_argument_here)
+print(myROC$auc)
+plot(myROC)
+```
+
+Bonus: You can look at alternative format for `roc()` function by reading `?roc()`.
