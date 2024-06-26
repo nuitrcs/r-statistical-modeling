@@ -2,6 +2,8 @@
 title: "Statistical Tests and Models"
 output: html_document
 date: "2024-06-05"
+editor_options:
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -34,7 +36,12 @@ if (accessible) {
 
 # Introduction
 
-In part 2 of this workshop, we will learn how to run statistical tests and models in R. We will consider some scenarios in which I want to test some hypothesis. For example, the questions can be "are two categorical variables related in some way, or are they independent?" or "are the means of a continuous variable equal across two groups?". The type of test or model that you use depends on what kind of variables you are dealing with and what the hypothesis tests for.
+In part 2 of this workshop, we will learn how to run statistical tests and models in R. We will consider some scenarios in which I want to test some hypothesis. For example, the questions can be:
+
+-   "are two categorical variables related in some way, or are they independent?"
+-   "are the means of a continuous variable equal across two groups?".
+
+The type of test or model that you use depends on what kind of variables you are dealing with and what the hypothesis tests for.
 
 ### Note on Assumptions
 
@@ -44,7 +51,7 @@ Do not be discouraged though - many of these tests are **robust** to mild violat
 
 ### Quick Note on Hypothesis Testing
 
-Hypothesis testing is a procedure in which you make a statement about a population and you put that to the test. Typically you define a null hypothesis ($H_0$) and alternative hypothesis ($H_a$ or $H_1$) that depends on your research question. The null hypothesis species how your data are distributed in the population. You then use the data obtained to measure the evidence **against** the null hypothesis.
+Hypothesis testing is a procedure in which you make a statement about a population and you put that to the test. Typically you define a null hypothesis ($H_0$) and alternative hypothesis ($H_a$ or $H_1$) that depends on your research question. The null hypothesis specifies how your data are distributed in the population. You then use the data obtained to measure the evidence **against** the null hypothesis.
 
 One of the ways we quantify this is with a **p-value**, which measures the probability of observing the data, or data with more unlikely outcome under the null hypothesis (assuming that the model and the sample is representative of the population).
 
@@ -57,6 +64,8 @@ For some of these illustrations I will use simulated data. The functions we comm
 To illustrate `sample()` function, imagine rolling a fair 6-sided die 5 times. To simulate this, I could write:
 
 ```{r}
+set.seed(100)
+
 sample(
   x = 1:6, # defines a set of possible outcomes from a random experiment
   size = 5, # number of times I would like to sample
@@ -70,11 +79,10 @@ In the long run, the proportion of each outcome should be roughly equal to 1/6.
 x <- sample(x = 1:6, size = 1e6, replace = TRUE)
 x <- factor(x, 1:6)
 
-prop.table(table(x)) %>%
-  as.data.frame() %>%
+data.frame(x = x) %>%
   ggplot() +
-  geom_col(aes(x = x, y = Freq)) +
-  geom_hline(yintercept = 1/6, color = "red", linewidth = 1.5, linetype = "dashed") +
+  geom_bar(aes(x = x)) +
+  geom_hline(yintercept = 1e6*1/6, color = "red", linewidth = 1.5, linetype = "dashed") +
   ggtitle("Proportion of Each Outcome", "Red Line at y = 1/6")
 ```
 
@@ -170,11 +178,7 @@ chisq.test(x = covid$vaccine_status, y = covid$outcome)
 
 ### Exercise 1
 
-Using the same data set, let's look at one more thing. There's an `age_group` variable in the data set. For this exercise, I would like you to use either `facet_grid()` or `facet_wrap()` to stratify by `age_group` and create a bar plots comparing outcome proportion between vaccination status. Since there are 2 age groups, you should get 2 separate bar plots.
-
-Since death is rare case in the dataset, instead of comparing the raw counts, I would suggest calculating the proportions as we did before.
-
-Then, try running `chisq.test` for each department between sex and admission.
+Using the same data set, let's look at one more thing. There's an `age_group` variable in the data set. Let's look at proportion of death for each vaccine status per age group.
 
 ```{r}
 covid %>%
@@ -185,12 +189,12 @@ covid %>%
   ggplot() +
   facet_wrap(~age_group, scales = "free") +
   geom_col(aes(x = vaccine_status, y = proportion))
+```
 
-covid_under_50 <- covid %>% filter(age_group == "under 50")
-covid_over_50 <- covid %>% filter(age_group == "50 +")
+Then, try running `chisq.test` for each age group to test independence of `vaccine_status` and `outcome`.
 
-chisq.test(x = covid_under_50$vaccine_status, y = covid_under_50$outcome)
-chisq.test(x = covid_over_50$vaccine_status, y = covid_over_50$outcome)
+```{r}
+
 ```
 
 ## Continuous Variable (Mean Comparison)
@@ -227,14 +231,14 @@ t.test(pgns_adelie$body_mass_g)
 
 ### Two Sample T-Test
 
-Two sample t-test is used to compare if the population means of two groups are equal or not.
+Two sample t-test is used to test if the population means of two groups are equal or not.
 
 Assumptions:
 
 -   The variable is continuous
 -   The observations are independent of one another
 -   The data in each group is approximately normally distributed
--   The dependent variable does not contain (spurious) extreme outliers
+-   The dependent variable does not contain extreme outliers
 
 Suppose I am interested in testing if the mean body mass of `Adelie` vs `Gentoo` penguins.
 
@@ -243,21 +247,24 @@ $H_0: \mu_{mass,Adelie} = \mu_{mass,Gentoo}$
 $H_a: \mu_{mass,Adelie} \neq \mu_{mass,Gentoo}$
 
 ```{r}
+# check if the data is normally distributed
 pgns %>%
   filter(species %in% c("Adelie", "Gentoo")) %>%
   ggplot(aes(x = species, y = body_mass_g, fill = species)) +
   geom_boxplot(show.legend = FALSE) +
-  stat_summary(geom = "point", fun = mean, show.legend = FALSE, pch = "x", size = 5)
+  stat_summary(geom = "point", fun = mean, show.legend = FALSE, pch = "x", size = 5, color = "white")
 
 pgns %>%
   filter(species %in% c("Adelie", "Gentoo")) %>%
   ggplot(aes(x = species, y = body_mass_g, fill = species)) +
   geom_violin(show.legend = FALSE) +
-  stat_summary(geom = "point", fun = mean, show.legend = FALSE, pch = "x", size = 5)
+  stat_summary(geom = "point", fun = mean, show.legend = FALSE, pch = "x", size = 5, color = "white")
 ```
 
 ```{r}
-t.test(body_mass_g ~ species, data = pgns %>% filter(species %in% c("Adelie", "Gentoo")))
+t.test(
+  body_mass_g ~ species,
+  data = pgns %>% filter(species %in% c("Adelie", "Gentoo")))
 ```
 
 The first argument passed into the `t.test()` is a formula object, which we will go over soon. What you should know right now is that the variable on the left is the dependent variable and the variable on the right is the independent variable. In the example above, we are comparison the mean of body mass (dependent variable), which depends on the species of the penguin (independent variable).
@@ -268,7 +275,7 @@ If you have more than two groups in a categorical independent variables and you 
 
 ANOVA (Analysis of Variance) is a type of model for comparison of means between three or more groups. There are different flavors of ANOVA, each of which are suitable for different experimental conditions. If we are comparing the means of a continuous variable across groups from one independent variable, we can use **one-way ANOVA**.
 
-This is an omnibus test statistic, meaning that if any pair of means is different, then the test will show statistical significance.
+This is an **omnibus test**, meaning that if any pair of means is different, then the test will show statistical significance.
 
 Assumptions:
 
@@ -276,7 +283,7 @@ Assumptions:
 -   The observations are independent of one another
 -   The data in each group is approximately normally distributed
 -   Variance of the data in the different groups should be approximately equal\*
--   The dependent variable does not contain (spurious) extreme outliers
+-   The dependent variable does not contain extreme outliers
 
 Instead of testing the mean of body mass between two species, we can extend the analysis to see if the means across all groups are equal.
 
@@ -293,12 +300,16 @@ pgns %>%
 
 ```{r}
 my_aov <- aov(body_mass_g ~ species, data = pgns)
-print(my_aov)
+print(summary(my_aov))
 ```
 
 ### Exercise 2
 
-Compare `body_mass_g` across islands. Plot distributions to check assumptions, and then run `aov()`.
+Compare `body_mass_g` across `island`. Plot distributions to check assumptions, and then run `aov()`.
+
+```{r}
+
+```
 
 ### R Formula Object
 
@@ -383,19 +394,29 @@ y ~ x1 + poly(x2, degree = 2)
 
 $y = \beta_0 + \beta_1x_1 + \beta_2x_2 \beta_3{x_2}^2$
 
+### Exercise 3
+
+Write a formula that models `body_mass_g` as a sum of `species`, `sex`, `bill_length_mm`, `bill_depth_mm`, `flipper_length_mm`.
+
+Extend the formula above by adding interaction between `species` and `sex`.
+
+```{r}
+
+```
+
 ## Linear Regression
 
 Linear regression is used to model a linear relationship between a dependent variable and multiple predictors. For simplicity, I will call the dependent variable Y and predictors X.
 
 The mathematical formula for linear regression can be represented as
 
-$Y_i = \beta_0 + \beta_1X_{i1} + \beta_2X_{i2} + ... + \beta_pX_{ip} + \epsilon_i$
+$Y = \beta_0 + \beta_1X_{1} + \beta_2X_{2} + ... + \beta_pX_{p} + \epsilon$
 
-Where $Y_i$ is the outcome of the ith observation, $X_ik$ is the ith observation of the kth dependent variable, and $\epsilon_i$ is the error term
+Where $Y$ is the outcome, $X_{k}$ is the kth dependent variable, and $\epsilon$ is the error term
 
 Assumptions:
 
--   There is a linear relationship between X and the mean of Y
+-   There is a linear relationship between X's and the mean of Y
 -   Observations are independent of each other.
 -   The variance of the error term is the same for any value of X (homoskedasticity)
 -   The error term is normally distributed with mean 0
@@ -413,6 +434,13 @@ For linear regression, you can use `lm()` function. Use `summary()` on the model
 ```{r}
 mymodel <- lm(body_mass_g ~ flipper_length_mm, data = pgns)
 summary(mymodel)
+```
+
+```{r}
+ggplot(pgns) + 
+  geom_point(aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_abline(intercept = mymodel$coefficients[1], slope = mymodel$coefficients[2], color = "red") +
+  ggtitle("Body Mass (g) vs Flipper Length (mm)", "with Best Fit Line")
 ```
 
 One way to check model assumptions is to directly use `plot()` function on the model output.
@@ -442,18 +470,21 @@ Here are the plots for model diagnostics
 plot(mymodel2)
 ```
 
-### Exercise 3
-
-In previous ANOVA example we saw significant differences between islands, but in linear regression it now looks like the effects are not statistical significant. Can you make a plot to explain why this is a case?
-
-```{r}
-ggplot(pgns) +
-  geom_boxplot(aes(x = island, y = body_mass_g, fill = species))
-```
-
 ### Exercise 4
 
-After looking at this plot, I also suspect that there is an interaction between species and sex. In other words, I suspect that the relationship between sex and body weight depends on the species. Can you create a linear model to capture this behavior? What p-value did you get?
+In previous ANOVA example we saw significant differences between islands in body mass, but in linear regression it now looks like the effects are not statistically significant. Can you make a plot to explain why this is a case?
+
+Hint: Since body mass is numeric and island and species are categorical, you could use boxplot to get distribution across each category in one variable and use fill to split by second variable.
+
+```{r}
+
+```
+
+### Exercise 5
+
+After looking at this plot, I also suspect that there is an interaction between species and sex. In other words, I suspect that the relationship between sex and body weight depends on the species. Can you create a linear model to capture this behavior?
+
+What p-value did you get for the interaction terms? Also, create a diagnostic plot - do you think it has improved the model compared to the model without the interaction terms?
 
 ```{r}
 ggplot(pgns) + 
@@ -461,12 +492,10 @@ ggplot(pgns) +
 ```
 
 ```{r}
-mymodel3 <- lm(body_mass_g ~ species * sex + island + bill_length_mm + bill_depth_mm + flipper_length_mm, data = pgns)
-summary(mymodel3)
-plot(mymodel3)
+
 ```
 
-## Using `broom` Package
+## Bonus 1: Using `broom` Package
 
 Instead of just looking at the model output, you might also want to retrieve some aspects of the model as a data frame for visualization or comparison across models.
 
@@ -527,7 +556,7 @@ mymodel2 %>%
   ggtitle("Recreate Residuals vs Leverage")
 ```
 
-## Generalized Linear Model: Logistic Regression
+## Bonus 2: Generalized Linear Model - Logistic Regression
 
 If you have an outcome variable that is categorical (e.g. sex, species) or numeric but not necessarily continuous (e.g. count), then Generalized Linear Model can be an option. Depending on the type of outcome variable that you have you can use a different class of GLM:
 
@@ -541,15 +570,7 @@ Let's consider a case in which we would like to predict `sex` in the penguins da
 table(pgns$sex)
 ```
 
-Since `sex` is either male or female in the data set, we have a binary outcome, so we can use logistic regression. Following is a mathematical formulation of the logistic regression model:
-
-$$
-log\big(\frac{p}{1-p}\big) = \beta_0 + \beta_1x_1 + \beta_2x_2...
-$$
-
-This looks very similar to the linear regression except for the left part. The $p$ represents a probability. In our example, if we set female = 0 and male = 1, then $p$ is the probability that a penguin is a male. The term inside the log, $\frac{p}{1-p}$ represents the **odds**. Higher value indicates higher probability of an event.
-
-The function $f(x) = log\big(\frac{x}{1-x}\big)$ is called **logit**, and this is essentially what "links" our outcome of interest to the linear prediction.
+Since `sex` is either male or female in the data set, we have a binary outcome, so we can use logistic regression.
 
 We can use `glm()` to run generalized logistic regression. Syntax is very similar to `lm()`, but now we also specify `family=` to tell R which type of regression to run with which link function.
 
@@ -583,7 +604,7 @@ logreg_model %>%
   augment()
 ```
 
-To get the probability output, you can set `type.predict = "response"` inside the function. Using this probabiliy, we could make a prediction rule. For example, if the probability is over 0.50, we predict that the penguin is a male.
+To get the probability output, you can set `type.predict = "response"` inside the function. Using this probability, we could make a prediction rule. For example, if the probability is over 0.50, we predict that the penguin is a male.
 
 ```{r}
 prediction_df <- logreg_model %>%
@@ -598,27 +619,30 @@ table(predicted = prediction_df$predicted_sex, actual = prediction_df$sex)
 
 You can learn more about other options by running `?augment.glm()`.
 
-### Exercise 5
-
 In this section we learned how to predict categories using logistic regression. Predicting categorical outcome is often referred to as classification problem in machine learning.
 
 One common way to assess the model for binary classification problem is to calculate what is called the Area Under the [Receiver Operating Characteristic Curve](https://en.wikipedia.org/wiki/Receiver_operating_characteristic) (ROC).
 
 There are many R packages that calculate the AUROC, but we will use the `pROC` package.
 
-```{r}
-# will install pROC package if it does not exist
-if (!require("pROC")) install.packages("pROC")
-```
-
-The documentation from `?pROC` tells us that we can use the `roc()` function to build a ROC curve, with which we can calculate the AUROC and plot them. To build the ROC curve, we can pass the true label (aka `sex` in our example) as a first argument and predicted probability as a second argument.
-
-I would like you to build the curve, find out the AUROC, and plot the ROC curve. Here's a basic template:
+We can find out the AUROC, and plot the ROC curve.
 
 ```{r, error = TRUE}
-myROC <- roc(first_argument_here, second_argument_here)
+# will install pROC package if it does not exist
+if (!require("pROC")) install.packages("pROC")
+library(pROC)
+
+myROC <- roc(prediction_df$sex, prediction_df$.fitted)
 print(myROC$auc)
 plot(myROC)
 ```
 
-Bonus: You can look at alternative format for `roc()` function by reading `?roc()`.
+## Bonus 3: Mathematical Formulation of Logistic Regression
+
+Following is a mathematical formulation of the logistic regression model:
+
+$$ log\big(\frac{p}{1-p}\big) = \beta_0 + \beta_1x_1 + \beta_2x_2... $$
+
+This looks very similar to the linear regression except for the left part. The $p$ represents a probability. In our example, if we set female = 0 and male = 1, then $p$ is the probability that a penguin is a male. The term inside the log, $\frac{p}{1-p}$ represents the **odds**. Higher value indicates higher probability of an event.
+
+The function $f(x) = log\big(\frac{x}{1-x}\big)$ is called **logit**, and this is essentially what "links" our outcome of interest to the linear prediction.

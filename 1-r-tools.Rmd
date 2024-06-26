@@ -2,15 +2,19 @@
 title: "Review in R"
 output: html_document
 date: "2024-06-05"
+editor_options:
+  chunk_output_type: console
 ---
 
 ```{r}
-if (!require("palmermpenguins")) install.packages("palmermpenguins")
+if (!require("palmerpenguins")) install.packages("palmerpenguins")
 if (!require("gridExtra")) install.packages("gridExtra")
+if (!require("VIM")) install.packages("VIM")
 
 library(palmerpenguins)
 library(tidyverse)
 library(ggpubr)
+library(VIM)
 ```
 
 ```{r}
@@ -26,7 +30,7 @@ if (accessible) {
 
 Welcome to the `Statistical Modeling with R` workshop! In this workshop, we will go over different stages in statistical modeling with emphasis on coding in R. We will first review some of the core packages in the `tidyverse` framework, such as `dplyr` and `ggplot2`, which are used for data cleaning and data exploration. After that, we will move on to conducting statistical tests and creating statistical models in R.
 
-This workshop will not focus on the theoretical groundwork of these statistical. Rather, we will familiarize ourselves with the process of running statistical models R and learn to leverage tools from `tidyverse` to check assumptions and visualize the model output.
+This workshop will not focus on the theoretical groundwork of these statistical models. Rather, we will familiarize ourselves with the process of running statistical models R and learn to leverage tools from `tidyverse` to check assumptions and visualize the model output.
 
 This markdown document is part 1 of this workshop, which is a review of `tidyverse`.
 
@@ -38,15 +42,9 @@ For the majority of this workshop, we will be working with the `penguins` data s
 head(penguins)
 ```
 
-`glimpse()` is also a useful function to get a quick rundown of all the columns in the data frame you're working with.
-
-```{r}
-glimpse(penguins)
-```
-
 # Quick Review of R
 
-Being able to utilize core functions of R as well as the data manipulation language in `tidyverse` is an essential skill for statistical analysis. Rarely do you start with the dataset that is clean and ready for analysis, and often you will need to go back after modelling after evaluating the model fit.
+Being able to utilize core functions of R as well as the data manipulation language in `tidyverse` is an essential skill for statistical analysis. Rarely do you start with the data set that is clean and ready for analysis, and often you will need to go back after modelling after evaluating the model fit.
 
 ## Data Manipulation with `dplyr` and `tidyr`
 
@@ -93,7 +91,7 @@ You can group data with `group_by()` function and summarize data with `summarize
 
 ```{r}
 penguins %>%
-  group_by(species, island) %>%
+  group_by(species) %>%
   summarize(
     n = n(), # number of rows
     mean_bill_length = mean(bill_length_mm), # mean of bill length
@@ -103,26 +101,17 @@ penguins %>%
 
 If I were to work naively with the data set, this would already show me that I'll have to do something with the missing values.
 
-If you have attended the R Intermediate Tidyverse workshop, you would have also encountered reshaping functions such as `pivot_longer()` and `pivot_wider()`. You may find these functions useful when you need to visualize the data in a certain way, or if you are working with repeated measures data (i.e. multiple measurements for each subject).
-
-```{r}
-glimpse(billboard)
-
-billboard %>%
-  pivot_longer(
-    cols = starts_with("wk"),
-    names_to = "week",
-    values_to = "rank"
-  )
-```
-
-This is a good time to mention [select helper functions](https://dplyr.tidyverse.org/reference/select.html) that helps with easily selecting multiple columns that conform to a certain pattern. For example, `starts_with("wk")` lets me select all columns that start with `"wk"`.
-
 There are many other functions in these packages that are useful for data manipulation. There may be more functions that I use in this workshop that I have not covered here, but I will do my best to explain as I go along.
 
 ## Exercise 1
 
-Select observations where `sex` is not missing and from `Biscoe` island. Then count the number of rows from each species within `Biscoe`.
+Select observations where `sex` is not missing and from `Biscoe` island.
+
+```{r}
+
+```
+
+Bonus: Extend the previous result to count the number of rows from each species within `Biscoe`.
 
 ```{r}
 
@@ -161,21 +150,20 @@ Let's try faceting the plot by year and look at body mass across species.
 
 ```{r}
 ggplot(penguins) +
-  geom_boxplot(aes(x = species, y = body_mass_g)) +
-  facet_wrap(~year) +
-  ggtitle("Body Mass by Species", "Faceted by Year") +
-  xlab("Species") +
-  ylab("Boddy Mass (g)")
+  facet_wrap(~species) +
+  geom_point(aes(x = bill_length_mm, y = bill_depth_mm, color = island)) +
+  ggtitle("Bill Length vs Bill Depth", "by Island")
 ```
 
 ## Exercise 2
 
-Plot the relationship between `species` and `body_mass_g` using boxplot.
+Plot the relationship between `bill_depth_mm` and `body_mass_g` with `geom_point()`.
 
-Plot the relationship between `bill_depth_mm` and `body_mass_g` using scatter plot. Color the points by `sex` variable.
+Bonus: color the points by `sex` variable
 
 ```{r}
-
+ggplot(penguins) +
+  # add your code here
 ```
 
 # Cleaning and Summarizing Data
@@ -184,7 +172,7 @@ Plot the relationship between `bill_depth_mm` and `body_mass_g` using scatter pl
 
 Data can come in a number of different types, and this can influence the type of visualization and model that you use. Largely there are two types of variables: **continuous** (or quantitative) and **categorical** variable.
 
-**Continuous variables** are numerical values that can change continuously. Example of continuous variables are weight, height, and price. In the `penguins` data, `bill_length_mm` and `bill_depth_mm` are examples of continuous variables.
+**Continuous variables** are numerical values that can change on a continuous scale. Example of continuous variables are weight, height, and price. In the `penguins` data, `bill_length_mm` and `bill_depth_mm` are examples of continuous variables.
 
 **Categorical variables** are types of variables that can be split into distinct categories or labels that represent different groups. They can be ordered (Ordinal) or non-ordered (Nominal). In the `penguins` data, `species` and `island` are examples of categorical variables.
 
@@ -202,6 +190,17 @@ For categorical variables, if you know what the possible categories are, it can 
 -   It protects you from inadvertently introducing a new category, which you might not have accounted for in your model.
 -   When visualizing, you can decide the ordering of the categories
 
+Following is a common error that you might enconter when working with factors.
+
+```{r}
+x <- factor(c('a','a','a','b','b'), levels = c('a','b'))
+print(x)
+
+x[5] <- "c" # set 5th element to "c"
+
+print(x)
+```
+
 Ultimately, which variable you would like to treat as category vs continuous depends on how you would like to characterize the data. For example, let's look at `year`.
 
 ```{r}
@@ -215,13 +214,7 @@ Although the data type is `integer` and I could interpret this as a continuous d
 
 Dealing with missing data is an important part of statistical analysis. There can be different reasons for missing data, and depending on the mechanism it can impact the performance of your model. Sometimes it might not affect your model substantively. Other times it can bias your results and possibly invalidate your finding. Therefore it is important to understand why the data is missing and deal with it accordingly.
 
-The subject on missing data is an important field of research in statistics and data science, and going in depth about exploring missingness and different methods for dealing with them warrants another workshop. Here, we will briefly go over some important notions, and try out some packages specifically made for visualizing missing data.
-
-There are largely 3 mechanisms in which data can be missing in an increasing order of potential threat to your analysis.
-
-1.  Missing Completely at Random (MCAR)
-2.  Missing at Random (MAR)
-3.  Missing Not at Random (MNAR)
+The subject on missing data is an important field of research in statistics and data science, and going in depth about exploring missingness and different methods for dealing with them warrants another workshop.
 
 ```{r}
 # select any rows with missing data
@@ -229,31 +222,18 @@ penguins %>%
   filter(if_any(everything(), is.na))
 ```
 
-There are many great options for visualizing missingness pattern. You can choose to explore yourself using `ggplot2`. There are many packages available [online](https://cran.r-project.org/web/views/MissingData.html#exploration) for this purpose.
+There are many great options for visualizing missingness pattern. You can choose to explore them yourself using `ggplot2`. There are many packages available [online](https://cran.r-project.org/web/views/MissingData.html#exploration) for this purpose.
 
-In the penguins dataset, most of the missing data were in the sex of the penguins. While looking at different relationships, I found something interesting:
+Here is an example of missing data summary using `VIM` package.
 
 ```{r}
-# check relationship between numeric variable and missingness in sex
-penguins %>%
-  # convert NA to a factor level
-  mutate(sex = fct_na_value_to_level(sex)) %>%
-  # pivot the table so that each row is a measurement of a variable 
-  # for each observation
-  pivot_longer(
-    cols = c(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g),
-    names_to = "variable",
-    values_to = "value"
-  ) %>%
-  # plot distribution of each variable by sex status
-  ggplot() +
-  facet_wrap(~variable, scales = "free_y") +
-  geom_boxplot(aes(x = sex, y = value)) +
-  geom_jitter(aes(x = sex, y = value), alpha = 0.1, width = 0.3) +
-  ggtitle("Distribution of Numeric Variables")
+# using missing visualization from VIM package
+plot(aggr(penguins, plot = FALSE), numbers = TRUE, prop = FALSE, cex.axis = 0.6)
 ```
 
-Could this indicate that many of the penguins with missing sex are females? What you decide to do from here depends on several factors. In this case, I only have 11 penguins with missing sex out of 344, which is only 3% of the data. Since this is a small portion of data, I might decide that it is not worthwhile to try to retrieve the data points and that removal of these points will not substantially change the outcome of my analysis.
+In the penguins dataset, most of the missing data were in the sex of the penguins.
+
+What you decide to do from here depends on several factors. In this case, I only have 11 penguins with missing sex out of 344, which is only 3% of the data. Since this is a small portion of data, it can be reasonable decide that it is not worthwhile to try to retrieve the data points and that removal of these points will not substantially change the outcome of my analysis.
 
 Here I will take that approach and do **listwise** deletion, which excludes data points with any single missing value.
 
@@ -265,23 +245,28 @@ dim(pgns)
 
 Another alternative, which I might have considered if there were more missing data points, is try to do **imputation**, which is a process of filling the missing values with best guess.
 
-# Getting to Know Your Data a Little Better
-
 ## Descriptive Statistics
 
 You often want to get descriptive statistics to give a numerical summary of the data. You can also do quick group comparisons by utilizing the `group_by()` and `summarise()` functions from `dplyr`.
 
-Here are some useful functions for summarizing data: `mean()`, `sd()`, `median()`, `quantile()`, `min()`, `max()`.
+Here are some useful functions for summarizing data: `n()`, `mean()`, `sd()`, `median()`, `quantile()`, `min()`, `max()`.
 
 ```{r}
 pgns %>%
-  group_by(island, species, sex) %>%
+  group_by(species, sex) %>% # group by species and sex
   summarise(
     n = n(),
-    across(
-      .cols = c(bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g), 
-      .fns = list(mean = mean, sd = sd))
+    bill_length_mean = mean(bill_length_mm, na.rm = TRUE),
+    bill_length_sd = sd(bill_length_mm, na.rm = TRUE)
   )
+```
+
+### Exercise 3
+
+Calculate the median, 25th quantile, and 75th quantile of `body_mass_g` for each species. For quantile, you can use `quantile()` function.
+
+```{r}
+
 ```
 
 Mean is commonly used to characterize the central tendency of the data. Be careful, though: mean is sensitive to outliers, so if you have data with outliers that is causing a heavy skew (i.e. not symmetrically distributed), you will want to use the median, which is more robust.
@@ -304,7 +289,9 @@ Depending on the type of variable you're exploring, you want to use different ty
 
 ### Distribution of a Continuous Variable
 
-When it comes to looking at a distribution of a continuous variable, you can use a histogram. This plot shows the distribution by binning across the continuous scale and showing the frequency within each bin. You should choose the width of the bin so that it best characterizes your data. Choose a width too wide, you will be masking some important trends; choose a width too small, you might not get enough samples in each bin to show meaning pattern.
+When it comes to looking at a distribution of a continuous variable, you can use a histogram. This plot shows the distribution by binning across the continuous scale and showing the frequency within each bin.
+
+You should choose the width of the bin so that it best characterizes your data. Choose a width too wide, you will be masking some important trends; choose a width too small, you might not get enough samples in each bin to show meaning pattern.
 
 ```{r}
 ggplot(pgns) +
@@ -336,13 +323,16 @@ ggplot(pgns) +
   geom_density(aes(x = bill_length_mm))
 ```
 
-## Exercise 3
+## Exercise 4
 
 Try different `bw=` to see how it affects the density plot.
 
 ```{r}
-
+ggplot(pgns) +
+  geom_density(aes(x = bill_length_mm), bw = ) # complete code
 ```
+
+### Continuous vs Categorical
 
 You can compare the distribution across different groups by specifying `fill=`.
 
@@ -363,18 +353,36 @@ Alternatively, to compare distribution of a continuous variable across groups (c
 ```{r}
 g1 <- ggplot(pgns) +
   geom_boxplot(
-    aes(x = species, y = bill_length_mm, fill = island), 
+    aes(x = species, y = bill_length_mm), 
     position = position_dodge2(preserve = "single")
   ) +
-  ggtitle("Distribution of Bill Length (mm)", "Color by Species")
+  ggtitle("Distribution of Bill Length (mm)")
 
 g2 <- ggplot(pgns) +
   geom_violin(
-    aes(x = species, y = bill_length_mm, fill = island)
+    aes(x = species, y = bill_length_mm)
   ) +
-  ggtitle("Distribution of Bill Length (mm)", "Color by Species")
+  ggtitle("Distribution of Bill Length (mm)")
 
 ggarrange(g1, g2, nrow = 1, common.legend = TRUE)
+```
+
+If you don't have too many data points, you can also choose to plot individual points on top of box plots. You can achieve this with `geom_jitter()`.
+
+```{r}
+ggplot(pgns, aes(x = species, y = bill_length_mm)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.8) +
+  ggtitle("Distribution of Bill Length (mm)")
+```
+
+### Exercise 5
+
+Use `iris` data set to compare `Sepal.Length` across different `Species`.
+
+```{r}
+ggplot(iris) +
+  # complete code
 ```
 
 ## Comparing Two Continuous Variables
@@ -415,9 +423,9 @@ g2 <- ggplot(pgns) +
 ggarrange(g1, g2, nrow = 1, common.legend = TRUE)
 ```
 
-## Exercise 4
+## Exercise 6
 
-Plot the relationship between bill depth and flipper length. Also, try coloring points by different grouping variables.
+Plot the relationship between `bill_depth_mm` and `flipper_length_mm`. Also, try coloring points by different grouping variables.
 
 ```{r}
 
@@ -477,26 +485,49 @@ ggplot(pgns, aes(x = species, y = body_mass_g, fill = sex)) +
 
 ```{r}
 penguins %>% 
-  filter(is.na(!sex) & island == "Biscoe") %>%
+  filter(!is.na(sex), island == "Biscoe")
+  
+penguins %>% 
+  filter(!is.na(sex), island == "Biscoe") %>%
   group_by(species) %>%
-  summarise(n = n())
+  count()
 ```
 
 ## Exercise 2
 
 ```{r}
-ggplot(penguins) + geom_boxplot(aes(x = species, y = body_mass_g))
-ggplot(penguins) + geom_point(aes(x = bill_depth_mm, y = body_mass_g, color = sex))
+ggplot(penguins) +
+  # add your code here
+  geom_point(aes(x = bill_depth_mm, y = body_mass_g, color = sex))
 ```
 
 ## Exercise 3
 
 ```{r}
-ggplot(pgns) +
-  geom_density(aes(x = bill_length_mm), bw = 0.1)
+pgns %>%
+  group_by(species) %>%
+  summarize(
+    median = median(body_mass_g),
+    `25th Quantile` = quantile(body_mass_g, 0.25),
+    `75th Quantile` = quantile(body_mass_g, 0.75)
+  )
 ```
 
 ## Exercise 4
+
+```{r}
+ggplot(pgns) +
+  geom_density(aes(x = bill_length_mm), bw = 1)
+```
+
+## Exercise 5
+
+```{r}
+ggplot(iris) +
+  geom_boxplot(aes(x = Species, y = Sepal.Length))
+```
+
+### Exercise 6
 
 ```{r}
 ggplot(pgns) +
