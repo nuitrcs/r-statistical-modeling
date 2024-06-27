@@ -105,7 +105,7 @@ Assumptions:
 
 $H_0: p_1 = p_2 = p_3 = p_4 = p_5 = p_6 = \frac{1}{6}$
 
-$H_0: \text{At least one of } p_i \neq \frac{1}{6}$
+$H_a: \text{At least one of } p_i \neq \frac{1}{6}$
 
 ```{r, eval=FALSE}
 # read chisq.test documentation
@@ -646,3 +646,48 @@ $$ log\big(\frac{p}{1-p}\big) = \beta_0 + \beta_1x_1 + \beta_2x_2... $$
 This looks very similar to the linear regression except for the left part. The $p$ represents a probability. In our example, if we set female = 0 and male = 1, then $p$ is the probability that a penguin is a male. The term inside the log, $\frac{p}{1-p}$ represents the **odds**. Higher value indicates higher probability of an event.
 
 The function $f(x) = log\big(\frac{x}{1-x}\big)$ is called **logit**, and this is essentially what "links" our outcome of interest to the linear prediction.
+
+## Exercise Solutions
+
+### Exercise 1
+
+```{r}
+covid_under_50 <- covid %>% filter(age_group == "under 50")
+covid_over_50 <- covid %>% filter(age_group == "50 +")
+
+chisq.test(x = covid_under_50$vaccine_status, y = covid_under_50$outcome)
+chisq.test(x = covid_over_50$vaccine_status, y = covid_over_50$outcome)
+```
+
+### Exercise 2
+
+```{r}
+ggplot(pgns) +
+  geom_boxplot(aes(x = island, y = body_mass_g))
+# we observe heteroskedasticity
+
+summary(aov(body_mass_g ~ island, data = pgns))
+```
+
+### Exercise 3
+
+```{r}
+body_mass_g ~ species + sex + bill_length_mm + bill_depth_mm + flipper_length_mm
+
+body_mass_g ~ species*sex + bill_length_mm + bill_depth_mm + flipper_length_mm
+```
+
+### Exercise 4
+
+```{r}
+ggplot(pgns) + geom_boxplot(aes(x = species, y = body_mass_g, fill = island))
+ggplot(pgns) + geom_boxplot(aes(x = island, y = body_mass_g, fill = species))
+```
+
+### Exercise 5
+
+```{r}
+mymodel3 <- lm(body_mass_g ~ species * sex + island + bill_length_mm + bill_depth_mm + flipper_length_mm, data = pgns)
+summary(mymodel3)
+plot(mymodel3)
+```

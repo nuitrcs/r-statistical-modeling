@@ -527,7 +527,7 @@ ggplot(iris) +
   geom_boxplot(aes(x = Species, y = Sepal.Length))
 ```
 
-### Exercise 6
+## Exercise 6
 
 ```{r}
 ggplot(pgns) +
